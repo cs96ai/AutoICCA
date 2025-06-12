@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36109.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ICCAAuto-DotNet9", "ICCAAuto-DotNet9\ICCAAuto-DotNet9.csproj", "{3F27EAC3-AEE6-4E32-A1A9-E6B95D83EEE3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MousePosition", "MousePosition\MousePosition.csproj", "{61082551-82F3-452B-B1B4-FA85AA6ACAC0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3F27EAC3-AEE6-4E32-A1A9-E6B95D83EEE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F27EAC3-AEE6-4E32-A1A9-E6B95D83EEE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F27EAC3-AEE6-4E32-A1A9-E6B95D83EEE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F27EAC3-AEE6-4E32-A1A9-E6B95D83EEE3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {81E21F2A-FAB2-4050-BA69-907F8F2868D2}
+	EndGlobalSection
+EndGlobal

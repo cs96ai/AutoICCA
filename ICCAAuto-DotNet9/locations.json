@@ -1,0 +1,15 @@
+[
+    { "xpos": 240, "ypos": 80, "instruction": "find patient" },
+    { "xpos": 635, "ypos": 337, "instruction": "click mrn" },
+    { "xpos": 634, "ypos": 536, "instruction": "click discharge" },
+    { "xpos": 1143, "ypos": 609, "instruction": "click search" },
+    { "xpos": 984, "ypos": 688, "instruction": "click first result" },
+    { "xpos": 1139, "ypos": 819, "instruction": "click open chart" },
+    { "xpos": 26, "ypos": 35, "instruction": "click home" },
+    { "xpos": 187, "ypos": 84, "instruction": "click print" },
+    { "xpos": 752, "ypos": 416, "instruction": "click patient charts checkbox" },
+    { "xpos": 818, "ypos": 358, "instruction": "click report packet tab" },
+    { "xpos": 754, "ypos": 419, "instruction": "click patient chart report pack" },
+    { "xpos": 1082, "ypos": 804, "instruction": "click ok" }
+  ]
+  
