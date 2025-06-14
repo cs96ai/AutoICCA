@@ -12,8 +12,13 @@ namespace MousePosition
     {
         [DllImport("user32.dll")]
         static extern bool GetCursorPos(out Point lpPoint);
+        
+        [DllImport("gdi32.dll", CharSet = CharSet.Auto, SetLastError = true, ExactSpelling = true)]
+        public static extern int BitBlt(IntPtr hDC, int x, int y, int nWidth, int nHeight, IntPtr hSrcDC, int xSrc, int ySrc, int dwRop);
 
         private static Label _coordLabel;
+        private static Label _colorLabel;
+        private static PictureBox _colorSample;
         private static List<MouseStep> _steps = new List<MouseStep>();
         private static int _stepCount = 0;
         private static readonly string _jsonFilePath = "MouseSteps.json";
@@ -36,7 +41,7 @@ namespace MousePosition
             // Set form position to top right of leftmost monitor
             form.StartPosition = FormStartPosition.Manual;
             form.Location = new Point(leftmostScreen.Bounds.Right - 300, leftmostScreen.Bounds.Top + 10);
-            form.Size = new Size(290, 100);
+            form.Size = new Size(290, 150);
 
             // Create label for displaying coordinates
             _coordLabel = new Label();
@@ -45,6 +50,21 @@ namespace MousePosition
             _coordLabel.ForeColor = Color.Red;
             _coordLabel.Location = new Point(10, 10);
             form.Controls.Add(_coordLabel);
+            
+            // Create label for displaying color
+            _colorLabel = new Label();
+            _colorLabel.AutoSize = true;
+            _colorLabel.Font = new Font("Arial", 18, FontStyle.Bold);
+            _colorLabel.ForeColor = Color.Red;
+            _colorLabel.Location = new Point(10, 50);
+            form.Controls.Add(_colorLabel);
+            
+            // Create picture box for color sample
+            _colorSample = new PictureBox();
+            _colorSample.Size = new Size(50, 50);
+            _colorSample.Location = new Point(220, 10);
+            _colorSample.BorderStyle = BorderStyle.FixedSingle;
+            form.Controls.Add(_colorSample);
 
             // Set up key press event
             form.KeyPress += Form_KeyPress;
@@ -65,8 +85,17 @@ namespace MousePosition
                     int relativeX = cursorPos.X - currentScreen.Bounds.X;
                     int relativeY = cursorPos.Y - currentScreen.Bounds.Y;
                     
+                    // Get color at cursor position
+                    Color pixelColor = GetColorAt(cursorPos);
+                    string hexColor = $"#{pixelColor.R:X2}{pixelColor.G:X2}{pixelColor.B:X2}";
+                    
                     _coordLabel.Text = $"X: {relativeX}, Y: {relativeY}";
+                    _colorLabel.Text = $"Color: {hexColor}";
+                    _colorSample.BackColor = pixelColor;
+                    
                     _coordLabel.Refresh();
+                    _colorLabel.Refresh();
+                    _colorSample.Refresh();
                 }
             };
             timer.Start();
@@ -75,6 +104,24 @@ namespace MousePosition
             LoadSteps();
 
             Application.Run(form);
+        }
+        
+        private static Color GetColorAt(Point point)
+        {
+            using (Bitmap screenPixel = new Bitmap(1, 1))
+            using (Graphics gdest = Graphics.FromImage(screenPixel))
+            {
+                using (Graphics gsrc = Graphics.FromHwnd(IntPtr.Zero))
+                {
+                    IntPtr hSrcDC = gsrc.GetHdc();
+                    IntPtr hDC = gdest.GetHdc();
+                    int retval = BitBlt(hDC, 0, 0, 1, 1, hSrcDC, point.X, point.Y, (int)CopyPixelOperation.SourceCopy);
+                    gdest.ReleaseHdc();
+                    gsrc.ReleaseHdc();
+                }
+                
+                return screenPixel.GetPixel(0, 0);
+            }
         }
 
         private static void Form_KeyPress(object sender, KeyPressEventArgs e)

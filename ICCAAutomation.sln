@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ICCAAuto-DotNet9", "ICCAAut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MousePosition", "MousePosition\MousePosition.csproj", "{61082551-82F3-452B-B1B4-FA85AA6ACAC0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountCheckBox", "CountCheckBox\CountCheckBox.csproj", "{398A272B-47FA-4EA5-B87E-3E6FEEE69BE3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{61082551-82F3-452B-B1B4-FA85AA6ACAC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{398A272B-47FA-4EA5-B87E-3E6FEEE69BE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{398A272B-47FA-4EA5-B87E-3E6FEEE69BE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{398A272B-47FA-4EA5-B87E-3E6FEEE69BE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{398A272B-47FA-4EA5-B87E-3E6FEEE69BE3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

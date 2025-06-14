@@ -17,6 +17,8 @@ namespace ICCAAutoDotNet9
 {
     class Program
     {
+        private static int reportsGenerated = 0; // Counter for number of reports generated
+
         // Log file paths
         private static readonly string StepLogPath = "StepLog.txt";
         private static readonly string PatientLogPath = "PatientLog.txt";
@@ -178,6 +180,7 @@ namespace ICCAAutoDotNet9
 
         static bool ProcessPatientViaXYPosition(string mrn)
         {
+            
             string jsonFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "locations.json");
             if (!File.Exists(jsonFilePath))
             {
@@ -218,20 +221,200 @@ namespace ICCAAutoDotNet9
                     int absoluteX = targetScreen.Bounds.X + step.XPos;
                     int absoluteY = targetScreen.Bounds.Y + step.YPos;
 
-                    // Move mouse and click
+                    // Move mouse and click with configurable delays
                     SetCursorPos(absoluteX, absoluteY);
-                    Thread.Sleep(500); // Small delay to ensure movement
+                    Thread.Sleep(step.PreClickDelay); // Configurable delay before clicking
                     mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                    LogStep($"Clicked at X={step.XPos}, Y={step.YPos} on leftmost monitor");
 
+                    // Handle different input steps
+                    if (step.Instruction?.ToLower() == "click mrn")
+                    {
+                        Thread.Sleep(step.InputDelay); // Wait for click to register
+                        SendKeys.SendWait(mrn);
+                        Thread.Sleep(step.InputDelay); // Wait for input
+                        SendKeys.SendWait("{ENTER}");
+                        Thread.Sleep(step.PostClickDelay); // Wait for processing
+                    }
+                    else if (step.Instruction?.ToLower() == "click auth reason")
+                    {
+                        Thread.Sleep(step.InputDelay); // Wait for click to register
+                        SendKeys.SendWait("Export Report");
+                        Thread.Sleep(step.InputDelay); // Wait for input
+                        SendKeys.SendWait("{ENTER}");
+                        Thread.Sleep(step.PostClickDelay); // Wait for processing
+                    }
+                    else if (step.Instruction?.ToLower() == "click next for all reports")
+                    {
+                        reportsGenerated=1;
+                        const int maxAttempts = 10;
+                        int attempts = 0;
+                        bool exitLoop = false;
+
+                        while (!exitLoop && attempts < maxAttempts)
+                        {
+                            attempts++;
+                            LogStep($"Report navigation attempt {attempts} of {maxAttempts} for MRN: {mrn}");
+
+                            // Step 1: Check and click first coordinate (time options) if not blue
+                            Color color1 = GetPixelColor(1207, 351);
+                            if (color1.R != 0x33 || color1.G != 0x99 || color1.B != 0xFF) // Not #3399FF
+                            {
+                                SetCursorPos(targetScreen.Bounds.X + 1207, targetScreen.Bounds.Y + 351);
+                                Thread.Sleep(step.InputDelay);
+                                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                                Thread.Sleep(step.PostClickDelay);
+                            }
+
+                            // Step 2: Check and click second coordinate (next button) if not light gray (#F0F0F0)
+                            Color color2 = GetPixelColor(1242, 785);
+                            bool isF0F0F0 = color2.R == 0xF0 && color2.G == 0xF0 && color2.B == 0xF0; // #F0F0F0
+                            bool isDDDDDD = color2.R == 0xDD && color2.G == 0xDD && color2.B == 0xDD; // #DDDDDD
+                            bool isDEDCDC = color2.R == 0xDE && color2.G == 0xDC && color2.B == 0xDC; // #DEDCDC
+                            bool isBEE6FD = color2.R == 0xBE && color2.G == 0xE6 && color2.B == 0xFD; // #BEE6FD
+
+                            string colorHex = $"#{color2.R:X2}{color2.G:X2}{color2.B:X2}";
+                            LogStep($"Detected color at next button (1242, 785): {colorHex}");
+                            
+                            if ((isDDDDDD || isDEDCDC || isBEE6FD) && !isF0F0F0)
+                            {
+                                SetCursorPos(targetScreen.Bounds.X + 1242, targetScreen.Bounds.Y + 785);
+                                Thread.Sleep(step.InputDelay);
+                                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                                Thread.Sleep(step.PostClickDelay);
+                                reportsGenerated++; // Increment counter when we successfully click next
+                                LogStep($"Successfully generated report {reportsGenerated} for MRN: {mrn}");
+                            }
+
+                            // Step 3: Check exit condition  (if the print button is dark gray or the next button is (f4f4f4-light gray) we're done)
+                            Color color3 = GetPixelColor(1326, 786);
+                            if (color3.R == 0xDD && color3.G == 0xDD && color3.B == 0xDD) // Is #DDDDDD
+                            {
+                                reportsGenerated++;
+                                SetCursorPos(targetScreen.Bounds.X + 1326, targetScreen.Bounds.Y + 786);
+                                Thread.Sleep(step.InputDelay);
+                                mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                                Thread.Sleep(step.PostClickDelay);
+                                exitLoop = true; // Exit condition met
+                            }
+
+                            if (!exitLoop)
+                            {
+                                Thread.Sleep(1000); // Wait a second before next attempt
+                            }
+                        }
+
+                        if (!exitLoop)
+                        {
+                            string errorMsg = $"Failed to complete report navigation after {maxAttempts} attempts for MRN: {mrn}. Stopping application.";
+                            LogStep(errorMsg);
+                            Console.WriteLine(errorMsg);
+                            Environment.Exit(1);
+                        }
+                    }
+                    else if (step.Instruction?.ToLower() == "click filename for all reports")
+                    {
+                        // Create export directory if it doesn't exist
+                        string exportDir = @"C:\ICCA_Exports\Export";
+                        if (!Directory.Exists(exportDir))
+                        {
+                            LogStep($"Creating export directory: {exportDir}");
+                            Directory.CreateDirectory(exportDir);
+                        }
+
+                        // Process each report
+                        for (int reportNum = 1; reportNum <= reportsGenerated; reportNum++)
+                        {
+                            LogStep($"Processing file {reportNum} of {reportsGenerated} for MRN: {mrn}");
+
+                            // Wait for the white background (color #FFFFFF)
+                            const int maxColorChecks = 20;
+                            int colorChecks = 0;
+                            bool isWhite = false;
+
+                            while (!isWhite && colorChecks < maxColorChecks)
+                            {
+                                colorChecks++;
+                                Color bgColor = GetPixelColor(183, 436);
+                                isWhite = bgColor.R == 0xFF && bgColor.G == 0xFF && bgColor.B == 0xFF; // #FFFFFF
+
+                                if (!isWhite)
+                                {
+                                    LogStep($"Waiting for white background, attempt {colorChecks} of {maxColorChecks}");
+                                    Thread.Sleep(2000); // Wait 2 seconds between checks
+                                }
+                            }
+
+                            if (!isWhite)
+                            {
+                                string errorMsg = $"Failed to detect white background after {maxColorChecks} attempts for MRN: {mrn}, report {reportNum}. Stopping application.";
+                                LogStep(errorMsg);
+                                Console.WriteLine(errorMsg);
+                                Environment.Exit(1);
+                            }
+
+                            // Background is white, proceed with file save
+                            string fileName = Path.Combine(exportDir, $"{mrn}_{reportNum}");
+                            LogStep($"Saving report {reportNum} to: {fileName}");
+
+                            Thread.Sleep(step.InputDelay);
+                            SendKeys.SendWait(fileName);
+                            Thread.Sleep(step.InputDelay);
+                            SendKeys.SendWait("{ENTER}");
+                            Thread.Sleep(step.PostClickDelay);
+                        }
+                    }
+                    else if (step.Instruction?.ToLower() == "done")
+                    {
+                        // Click at the specified coordinates
+                        SetCursorPos(targetScreen.Bounds.X + step.XPos, targetScreen.Bounds.Y + step.YPos);
+                        Thread.Sleep(step.InputDelay);
+                        mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                        Thread.Sleep(step.PostClickDelay);
+
+                        // Log the total reports generated and reset counter
+                        LogStep($"Completed processing {reportsGenerated} reports for MRN: {mrn}");
+                        reportsGenerated = 0;
+                    }
+                   
                     // Capture screenshot and mark the click location
                     Bitmap screenshot = CaptureScreenshot();
                     using (Graphics g = Graphics.FromImage(screenshot))
                     {
-                        using (SolidBrush brush = new SolidBrush(Color.Red))
+                        // Draw click location dot
+                        using (SolidBrush redBrush = new SolidBrush(Color.Red))
                         {
                             int dotSize = 20;
-                            g.FillEllipse(brush, step.XPos - dotSize / 2, step.YPos - dotSize / 2, dotSize, dotSize);
+                            g.FillEllipse(redBrush, step.XPos - dotSize / 2, step.YPos - dotSize / 2, dotSize, dotSize);
+                        }
+
+                        // Draw step name in top right corner with outline
+                        using (Font boldFont = new Font("Arial", 16, FontStyle.Bold))
+                        {
+                            string stepText = $"Step {stepNumber}: {step.Instruction}";
+                            SizeF textSize = g.MeasureString(stepText, boldFont);
+                            float x = screenshot.Width - textSize.Width - 20; // 20px padding from right
+                            float y = 20; // 20px from top
+
+                            // Draw black outline
+                            using (SolidBrush blackBrush = new SolidBrush(Color.Black))
+                            {
+                                // Draw text offset in 8 directions
+                                float offset = 1.0f;
+                                g.DrawString(stepText, boldFont, blackBrush, x - offset, y);
+                                g.DrawString(stepText, boldFont, blackBrush, x + offset, y);
+                                g.DrawString(stepText, boldFont, blackBrush, x, y - offset);
+                                g.DrawString(stepText, boldFont, blackBrush, x, y + offset);
+                                g.DrawString(stepText, boldFont, blackBrush, x - offset, y - offset);
+                                g.DrawString(stepText, boldFont, blackBrush, x + offset, y - offset);
+                                g.DrawString(stepText, boldFont, blackBrush, x - offset, y + offset);
+                                g.DrawString(stepText, boldFont, blackBrush, x + offset, y + offset);
+                            }
+
+                            // Draw red text on top
+                            using (SolidBrush redBrush = new SolidBrush(Color.Red))
+                            {
+                                g.DrawString(stepText, boldFont, redBrush, x, y);
+                            }
                         }
                     }
                     SaveImage(screenshot, $"Step_{stepNumber}_Click", "screenshot_with_click");
@@ -517,6 +700,42 @@ namespace ICCAAutoDotNet9
             File.AppendAllText(PatientLogPath, logMessage);
         }
 
+        [DllImport("user32.dll")]
+        static extern IntPtr GetDC(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
+        static extern int ReleaseDC(IntPtr hwnd, IntPtr hdc);
+
+        [DllImport("gdi32.dll")]
+        static extern uint GetPixel(IntPtr hdc, int nXPos, int nYPos);
+
+        static Color GetPixelColor(int x, int y)
+        {
+            // Always use the leftmost monitor
+            Screen targetScreen = Screen.AllScreens.OrderBy(s => s.Bounds.X).FirstOrDefault() ?? Screen.PrimaryScreen;
+            
+            // Adjust coordinates for leftmost monitor
+            int absoluteX = targetScreen.Bounds.X + x;
+            int absoluteY = targetScreen.Bounds.Y + y;
+            
+            LogStep($"Getting color from leftmost monitor at ({x}, {y}) -> ({absoluteX}, {absoluteY})");
+            
+            IntPtr hdc = GetDC(IntPtr.Zero);
+            try
+            {
+                uint pixel = GetPixel(hdc, absoluteX, absoluteY);
+                Color color = Color.FromArgb(
+                    (int)(pixel & 0x000000FF),         // Red
+                    (int)(pixel & 0x0000FF00) >> 8,   // Green
+                    (int)(pixel & 0x00FF0000) >> 16); // Blue
+                return color;
+            }
+            finally
+            {
+                ReleaseDC(IntPtr.Zero, hdc);
+            }
+        }
+
         static void KeyListener()
         {
             while (true)
@@ -546,6 +765,15 @@ namespace ICCAAutoDotNet9
 
         [JsonPropertyName("instruction")]
         public string Instruction { get; set; } = string.Empty;
+
+        [JsonPropertyName("pre_click_delay")]
+        public int PreClickDelay { get; set; } = 500;  // Default 500ms delay before clicking
+
+        [JsonPropertyName("post_click_delay")]
+        public int PostClickDelay { get; set; } = 2000;  // Default 2000ms delay after clicking
+
+        [JsonPropertyName("input_delay")]
+        public int InputDelay { get; set; } = 500;  // Default 500ms delay between input actions
 
         // Maintain compatibility with existing code if needed
         public int StepNumber { get; set; } = 0;

@@ -1,0 +1,12 @@
+Y123456
+Y123546
+Y222110
+1235466
+
+
+
+	/*
+	ignore this for now, it confirms reason for opening  charts
+	{ "xpos": 923, "ypos": 528, "instruction": "click auth reason", "pre_click_delay": 500, "post_click_delay": 3000, "input_delay": 500 },
+	{ "xpos": 1075, "ypos": 644, "instruction": "click auth reason - click yes", "pre_click_delay": 500, "post_click_delay": 3000, "input_delay": 500 },
+	*/
