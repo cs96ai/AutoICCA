@@ -11,6 +11,7 @@
     { "xpos": 26, "ypos": 35, "instruction": "click home", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
     { "xpos": 187, "ypos": 84, "instruction": "click print", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
     { "xpos": 752, "ypos": 416, "instruction": "click patient charts checkbox", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
+	{ "xpos": 724, "ypos": 407, "instruction": "box count screen shot", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
     { "xpos": 1082, "ypos": 804, "instruction": "click ok", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
 	
 	{ "xpos": 1211, "ypos": 788, "instruction": "click next for all reports", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },

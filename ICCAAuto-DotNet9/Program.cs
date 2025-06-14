@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.Windows.Forms;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using OpenCvSharp;
-using OpenCvSharp.Flann;
-using OpenCvSharp.Extensions;
+using System.Drawing.Imaging;
+
 using System.Text.Json.Serialization;
 using System.Text.Json;
+using CountCheckBox;
+using System.Windows.Forms;
 
 namespace ICCAAutoDotNet9
 {
@@ -94,8 +96,10 @@ namespace ICCAAutoDotNet9
             {
                 if (File.Exists(MrnFilePath))
                 {
-                    mrnList = new List<string>(File.ReadAllLines(MrnFilePath));
-                    mrnList.RemoveAll(string.IsNullOrWhiteSpace);
+                    mrnList = File.ReadAllLines(MrnFilePath)
+                        .Where(mrn => !string.IsNullOrWhiteSpace(mrn))
+                        .Distinct()
+                        .ToList();
                     LogStep("Successfully read MRN file");
                     Console.WriteLine($"Read {mrnList.Count} MRNs from file.");
                 }
@@ -311,6 +315,40 @@ namespace ICCAAutoDotNet9
                             Environment.Exit(1);
                         }
                     }
+                    else if (step.Instruction?.ToLower() == "box count screen shot")
+                    {
+                        // Always use the leftmost monitor
+                        Screen targetScreen2 = Screen.AllScreens.OrderBy(s => s.Bounds.X).FirstOrDefault() ?? Screen.PrimaryScreen;
+
+                        // Define screenshot region relative to leftmost monitor
+                        int x = targetScreen2.Bounds.X + 724;  // Add monitor offset to x coordinate
+                        int y = 407;  // Y coordinate remains the same
+                        int width = 1193 - 724;
+                        int height = 763 - 407;
+
+                        LogStep($"Taking screenshot from leftmost monitor at coordinates: ({x}, {y}) with size {width}x{height}");
+
+                        // Take screenshot of the specified region
+                        string screenshotPath = Path.Combine(Path.GetTempPath(), "temp_screenshot.png");
+                        using (Bitmap bitmap = new Bitmap(width, height))
+                        {
+                            using (Graphics g = Graphics.FromImage(bitmap))
+                            {
+                                g.CopyFromScreen(x, y, 0, 0, new System.Drawing.Size(width, height));
+                            }
+                            bitmap.Save(screenshotPath);
+                        }
+
+                        LogStep($"Screenshot saved to: {screenshotPath}");
+
+                        // Process the screenshot and count boxes
+                        var boxCounter = new BoxCounter();
+                        string outputPath = Path.Combine(Path.GetTempPath(), "processed_screenshot.png");
+                        reportsGenerated = boxCounter.ProcessImageAndCountBoxes(screenshotPath, outputPath);
+
+                        LogStep($"Box count completed. Found {reportsGenerated} boxes.");
+                    }
+
                     else if (step.Instruction?.ToLower() == "click filename for all reports")
                     {
                         // Create export directory if it doesn't exist
@@ -322,7 +360,7 @@ namespace ICCAAutoDotNet9
                         }
 
                         // Process each report
-                        for (int reportNum = 1; reportNum <= reportsGenerated; reportNum++)
+                        for (int reportNum = 0; reportNum <= reportsGenerated; reportNum++)
                         {
                             LogStep($"Processing file {reportNum} of {reportsGenerated} for MRN: {mrn}");
 
@@ -363,6 +401,9 @@ namespace ICCAAutoDotNet9
                             Thread.Sleep(step.PostClickDelay);
                         }
                     }
+
+
+
                     else if (step.Instruction?.ToLower() == "done")
                     {
                         // Click at the specified coordinates
@@ -510,73 +551,7 @@ namespace ICCAAutoDotNet9
             return false;
         }
 
-        static System.Drawing.Point? FindTemplateInScreenshot(Bitmap screenshot, Bitmap template, string imagePath = "")
-        {
-            // Convert Bitmap to Mat for OpenCvSharp processing
-            Mat screenshotMat = BitmapToMat(screenshot);
-            Mat templateMat = BitmapToMat(template);
-
-            try
-            {
-                // Convert images to grayscale
-                Mat screenshotGray = new Mat();
-                Mat templateGray = new Mat();
-                Cv2.CvtColor(screenshotMat, screenshotGray, ColorConversionCodes.BGRA2GRAY);
-                Cv2.CvtColor(templateMat, templateGray, ColorConversionCodes.BGRA2GRAY);
-
-                Mat searchAreaGray = screenshotGray;
-
-                // If searching for 01-FindPatient.png, restrict to top-left quarter
-                if (imagePath.EndsWith("01-FindPatient.png", StringComparison.OrdinalIgnoreCase))
-                {
-                    int quarterWidth = screenshotGray.Cols / 2;
-                    int quarterHeight = screenshotGray.Rows / 2;
-                    searchAreaGray = screenshotGray.SubMat(0, quarterHeight, 0, quarterWidth);
-                    LogStep("Restricting search to top-left quarter for 01-FindPatient.png");
-                    Console.WriteLine("Restricting search to top-left quarter for 01-FindPatient.png");
-                }
-
-                // Check if template is inside screenshot
-                using (var result = new Mat(searchAreaGray.Rows - templateGray.Rows + 1, searchAreaGray.Cols - templateGray.Cols + 1, MatType.CV_32FC1))
-                {
-                    //this should really be calibrated instead of hard coded
-                    Cv2.MatchTemplate(searchAreaGray, templateGray, result, TemplateMatchModes.CCoeffNormed);
-
-                    // Find maximum value
-                    double value;
-                    OpenCvSharp.Point maxLoc;
-                    Cv2.MinMaxLoc(result, out value, out _, out maxLoc, out _);
-
-                    LogStep($"Template matching value: {value}");
-                    Console.WriteLine($"Template matching value: {value}");
-
-                    // Adjust location if we searched in a sub-area
-                    if (imagePath.EndsWith("01-FindPatient.png", StringComparison.OrdinalIgnoreCase))
-                    {
-                        LogStep($"Match location in top-left quarter: ({maxLoc.X}, {maxLoc.Y})");
-                    }
-
-                    // if (value > 0.9) // TODO: adjust threshold
-                    // {
-                    // Return the top left corner of the template in screenshot coordinates
-                    return new System.Drawing.Point(maxLoc.X, maxLoc.Y);
-                    // }
-                    //return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogStep($"Error in template matching: {ex.Message}");
-                Console.WriteLine($"Error in template matching: {ex.Message}");
-                return null;
-            }
-            finally
-            {
-                // Ensure proper disposal of Mat objects
-                screenshotMat.Dispose();
-                templateMat.Dispose();
-            }
-        }
+        
 
         static void SaveImage(Bitmap image, string stepName, string imageType, int boxX = -1, int boxY = -1, int boxWidth = 0, int boxHeight = 0)
         {
@@ -671,22 +646,7 @@ namespace ICCAAutoDotNet9
             }
         }
 
-        static Mat BitmapToMat(Bitmap bitmap)
-        {
-            try
-            {
-                var imageMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(bitmap);
-
-                LogStep("Successfully converted Bitmap to Mat using BitmapConverter");
-                return imageMat;
-            }
-            catch (Exception ex)
-            {
-                LogStep($"Error converting Bitmap to Mat: {ex.Message}");
-                Console.WriteLine($"Error converting Bitmap to Mat: {ex.Message}");
-                throw new Exception("Failed to convert Bitmap to Mat", ex);
-            }
-        }
+        
 
         static void LogStep(string message)
         {
@@ -755,27 +715,5 @@ namespace ICCAAutoDotNet9
         }
     }
 
-    public class MouseStep
-    {
-        [JsonPropertyName("xpos")]
-        public int XPos { get; set; }
-
-        [JsonPropertyName("ypos")]
-        public int YPos { get; set; }
-
-        [JsonPropertyName("instruction")]
-        public string Instruction { get; set; } = string.Empty;
-
-        [JsonPropertyName("pre_click_delay")]
-        public int PreClickDelay { get; set; } = 500;  // Default 500ms delay before clicking
-
-        [JsonPropertyName("post_click_delay")]
-        public int PostClickDelay { get; set; } = 2000;  // Default 2000ms delay after clicking
-
-        [JsonPropertyName("input_delay")]
-        public int InputDelay { get; set; } = 500;  // Default 500ms delay between input actions
-
-        // Maintain compatibility with existing code if needed
-        public int StepNumber { get; set; } = 0;
-    }
+   
 }
