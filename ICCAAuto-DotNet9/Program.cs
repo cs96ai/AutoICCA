@@ -262,8 +262,8 @@ namespace ICCAAutoDotNet9
 
                             // Step 1: Check check to see if the default reporting period is selected
                             
-                            Bitmap leftMostScreen = CaptureScreenshot();
-                            var timeCheckResult = TimeOptions.CheckForBlueBarInTimeSelection(leftMostScreen);
+                            
+                            var timeCheckResult = TimeOptions.CheckForBlueBarInTimeSelection(CaptureScreenshot());
 
                             if (!timeCheckResult.ColorFound)
                             {

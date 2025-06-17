@@ -305,9 +305,7 @@ namespace CountCheckBox
             // Calculate the middle X coordinate of the box
             int middleX = startX + (width / 2);
 
-            // Create a copy of the screenshot for debug drawing
-            Bitmap debugImage = new Bitmap(screenshot.Width, screenshot.Height);
-            using (Graphics g = Graphics.FromImage(debugImage))
+            using (Graphics g = Graphics.FromImage(screenshot))
             {
                 // Copy the original screenshot
                 g.DrawImage(screenshot, 0, 0);
@@ -345,8 +343,8 @@ namespace CountCheckBox
                         // Save the debug image
                         string debugPath = $".\\Debug\\debug_bluebar_found_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
                         Directory.CreateDirectory(".\\Debug");
-                        debugImage.Save(debugPath, ImageFormat.Png);
-                        debugImage.Dispose();
+                        screenshot.Save(debugPath, ImageFormat.Png);
+                        screenshot.Dispose();
 
                         // Color found, return true with no coordinates
                         return new TimeCheckResult { ColorFound = true, XCoordinate = 0, YCoordinate = 0 };
@@ -427,8 +425,8 @@ namespace CountCheckBox
                 // Save the debug image
                 string debugPathNotFound = $".\\Debug\\debug_bluebar_notfound_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
                 Directory.CreateDirectory(".\\Debug");
-                debugImage.Save(debugPathNotFound, ImageFormat.Png);
-                debugImage.Dispose();
+                screenshot.Save(debugPathNotFound, ImageFormat.Png);
+                screenshot.Dispose();
                 searchArea.Dispose();
                 bwImage.Dispose();
 
