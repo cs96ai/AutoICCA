@@ -1,5 +1,7 @@
 using System;
+using System.Drawing;
 using System.IO;
+
 
 namespace CountCheckBox
 {
@@ -9,19 +11,22 @@ namespace CountCheckBox
         {
             try
             {
-                string imagePath = "TimeOptions2.png";
+                string imagePath = "TimeOptions3.png";
                 string targetText = "length of stay";
 
-                var timeOptions = new TimeOptions();
-                var (x, y) = timeOptions.FindTextLineCoordinates(imagePath);
+                // Load the image as a Bitmap
+                Bitmap image = new Bitmap(imagePath);
 
-                if (x == -1 && y == -1)
+                // Call the method with Bitmap
+                var result = TimeOptions.CheckForBlueBarInTimeSelection(image);
+
+                if (result.ColorFound)
                 {
-                    Console.WriteLine($"No match found for '{targetText}'.");
+                    Console.WriteLine("Blue bar found in time selection.");
                 }
                 else
                 {
-                    Console.WriteLine($"Best match for '{targetText}' found at coordinates: x={x}, y={y}");
+                    Console.WriteLine($"Blue bar not found. Suggested click coordinates: x={result.XCoordinate}, y={result.YCoordinate}");
                 }
             }
             catch (Exception ex)

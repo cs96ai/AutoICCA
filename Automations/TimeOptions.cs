@@ -3,8 +3,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 
-
-
 namespace CountCheckBox
 {
     public class TimeOptions
@@ -21,10 +19,10 @@ namespace CountCheckBox
             using (Bitmap image = new Bitmap(imagePath))
             {
                 // Convert to grayscale and binarize (black/white)
-                Bitmap bwImage = BinarizeImage(image);
+                Bitmap bwImage = this.BinarizeImage(image);
 
                 // Find line bounds (top, bottom) for each line
-                var lineBounds = FindTextLines(bwImage);
+                var lineBounds = this.FindTextLines(bwImage);
 
                 // Prepare to draw debug image
                 using (Bitmap debugImage = new Bitmap(image.Width, image.Height))
@@ -283,85 +281,165 @@ namespace CountCheckBox
                 return boxesCount;
             }
         }
-    }
-}
 
-
-
-
-
-/*
-
-//here some sample ocr matching text algorith that might help
-
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-public class OCRTextMatcher
-{
-    public class MatchResult
-    {
-        public string Text { get; set; }
-        public double Score { get; set; }
-        public int MatchedPositions { get; set; }
-    }
-
-    public static MatchResult FindBestMatch(string target, List<string> ocrLines)
-    {
-        if (string.IsNullOrEmpty(target) || ocrLines == null || !ocrLines.Any())
-            return null;
-
-        // Calculate character frequency across all OCR lines to determine uniqueness
-        var charFrequency = new Dictionary<char, int>();
-        foreach (var line in ocrLines.SelectMany(s => s.ToLower()))
+        public class TimeCheckResult
         {
-            charFrequency[line] = charFrequency.GetValueOrDefault(line, 0) + 1;
+            public bool ColorFound { get; set; }
+            public int XCoordinate { get; set; }
+            public int YCoordinate { get; set; }
         }
 
-        MatchResult bestMatch = null;
-        double highestScore = 0;
-
-        foreach (var line in ocrLines)
+        public static TimeCheckResult CheckForBlueBarInTimeSelection(Bitmap screenshot)
         {
-            // Skip lines that are too short or too different in length
-            if (line.Length < target.Length / 2 || Math.Abs(line.Length - target.Length) > target.Length)
-                continue;
+            // Define the area to check (top-left corner x=833, y=345, width=562, height=145)
+            int startX = 833;
+            int startY = 345;
+            int width = 562;
+            int height = 145;
+            int endX = startX + width;
+            int endY = startY + height;
 
-            int matchedPositions = 0;
-            double uniquenessScore = 0;
+            // Target color to find: #3399FF (RGB: 51, 153, 255)
+            Color targetColor = Color.FromArgb(51, 153, 255);
 
-            // Compare characters in corresponding positions
-            for (int i = 0; i < Math.Min(line.Length, target.Length); i++)
+            // Calculate the middle X coordinate of the box
+            int middleX = startX + (width / 2);
+
+            // Create a copy of the screenshot for debug drawing
+            Bitmap debugImage = new Bitmap(screenshot.Width, screenshot.Height);
+            using (Graphics g = Graphics.FromImage(debugImage))
             {
-                if (char.ToLower(line[i]) == char.ToLower(target[i]))
+                // Copy the original screenshot
+                g.DrawImage(screenshot, 0, 0);
+
+                // Draw the search area rectangle in cyan
+                using (Pen cyanPen = new Pen(Color.Orange, 2))
                 {
-                    matchedPositions++;
-                    // Boost score for unique or rare characters
-                    double rarity = charFrequency.ContainsKey(char.ToLower(target[i]))
-                        ? 1.0 / charFrequency[char.ToLower(target[i])]
-                        : 1.0;
-                    uniquenessScore += rarity;
+                    g.DrawRectangle(cyanPen, startX, startY, width, height);
                 }
-            }
 
-            // Calculate total score: base match + uniqueness bonus
-            double matchScore = (double)matchedPositions / target.Length;
-            double totalScore = matchScore + (uniquenessScore * 0.1); // Adjust weight of uniqueness
-
-            if (totalScore > highestScore && matchScore >= 0.5) // Require at least 50% positional match
-            {
-                highestScore = totalScore;
-                bestMatch = new MatchResult
+                // Draw text for search area coordinates
+                using (Font font = new Font("Arial", 12))
+                using (SolidBrush brush = new SolidBrush(Color.Orange))
                 {
-                    Text = line,
-                    Score = totalScore,
-                    MatchedPositions = matchedPositions
+                    g.DrawString($"Search Area ({startX},{startY}) to ({endX},{endY})", font, brush, startX, startY - 20);
+                    g.DrawString($"Width: {width}, Height: {height}", font, brush, startX, startY - 40);
+                }
+
+                // Start from the bottom of the box and move up checking each pixel for blue bar
+                for (int y = endY - 1; y >= startY; y--)
+                {
+                    Color pixelColor = screenshot.GetPixel(middleX, y);
+                    // Draw a small red dot for each pixel checked (search path)
+                    g.FillRectangle(Brushes.Red, middleX - 1, y - 1, 3, 3);
+
+                    if (pixelColor.R == targetColor.R && pixelColor.G == targetColor.G && pixelColor.B == targetColor.B)
+                    {
+                        // Draw a larger green circle around the found blue pixel
+                        using (Pen greenPen = new Pen(Color.LimeGreen, 2))
+                        {
+                            g.DrawEllipse(greenPen, middleX - 10, y - 10, 20, 20);
+                            g.DrawString("Blue Bar Found!", new Font("Arial", 12), new SolidBrush(Color.LimeGreen), middleX + 15, y - 10);
+                        }
+
+                        // Save the debug image
+                        string debugPath = $".\\Debug\\debug_bluebar_found_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
+                        Directory.CreateDirectory(".\\Debug");
+                        debugImage.Save(debugPath, ImageFormat.Png);
+                        debugImage.Dispose();
+
+                        // Color found, return true with no coordinates
+                        return new TimeCheckResult { ColorFound = true, XCoordinate = 0, YCoordinate = 0 };
+                    }
+                }
+
+                // If blue bar color is not found, look for text lines in the search area
+                // Convert search area to grayscale and binarize (black/white)
+                Bitmap searchArea = new Bitmap(width, height);
+                using (Graphics areaG = Graphics.FromImage(searchArea))
+                {
+                    areaG.DrawImage(screenshot, 0, 0, new Rectangle(startX, startY, width, height), GraphicsUnit.Pixel);
+                }
+                Bitmap bwImage = new TimeOptions().BinarizeImage(searchArea);
+
+                // Find text lines within the search area
+                var lineBounds = new TimeOptions().FindTextLines(bwImage);
+                int clickX = middleX;
+                int clickY = endY - 1; // Default to bottom if no suitable line is found
+
+                Pen linePen = new Pen(Color.Blue, 1);
+                Pen targetPen = new Pen(Color.Magenta, 2);
+
+                // Process each detected line
+                foreach (var bounds in lineBounds)
+                {
+                    // Adjust bounds to original image coordinates
+                    int adjustedTop = startY + bounds.top;
+                    int adjustedBottom = startY + bounds.bottom;
+
+                    // Draw horizontal bounds in debug image
+                    g.DrawLine(linePen, startX, adjustedTop, endX - 1, adjustedTop);
+                    g.DrawLine(linePen, startX, adjustedBottom, endX - 1, adjustedBottom);
+
+                    // Find bounding box of black pixels in this line within search area
+                    int minX = bwImage.Width, maxX = -1;
+                    for (int y = bounds.top; y <= bounds.bottom; y++)
+                    {
+                        for (int x = 0; x < bwImage.Width; x++)
+                        {
+                            if (bwImage.GetPixel(x, y).R == 0)
+                            {
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                            }
+                        }
+                    }
+
+                    if (maxX >= minX)
+                    {
+                        int lineWidth = maxX - minX + 1;
+                        // Draw bounding box for this line
+                        int adjustedMinX = startX + minX;
+                        int adjustedMaxX = startX + maxX;
+                        g.DrawRectangle(linePen, adjustedMinX, adjustedTop, lineWidth, bounds.bottom - bounds.top + 1);
+
+                        // Draw the width as text to the right of the bounding box
+                        using (Font widthFont = new Font("Arial", 12, FontStyle.Bold))
+                        using (Brush widthBrush = new SolidBrush(Color.Red))
+                        {
+                            int textX = adjustedMaxX + 10;
+                            int textY = adjustedTop + (adjustedBottom - adjustedTop) / 2 - 8; // vertical center
+                            g.DrawString(lineWidth.ToString(), widthFont, widthBrush, textX, textY);
+                        }
+
+                        if (lineWidth == 68 || lineWidth == 67)
+                        {
+                            // Highlight this box as the target to click
+                            g.DrawRectangle(targetPen, adjustedMinX, adjustedTop, lineWidth, bounds.bottom - bounds.top + 1);
+                            clickY = (adjustedTop + adjustedBottom) / 2; // Center vertically
+                            clickX = (adjustedMinX + adjustedMaxX) / 2; // Center horizontally
+                            g.DrawEllipse(targetPen, clickX - 2, clickY - 2, 5, 5);
+                            g.DrawString($"Target Click ({clickX},{clickY})", new Font("Arial", 12), new SolidBrush(Color.Magenta), clickX + 15, clickY - 10);
+                        }
+                    }
+                }
+
+                // Save the debug image
+                string debugPathNotFound = $".\\Debug\\debug_bluebar_notfound_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";
+                Directory.CreateDirectory(".\\Debug");
+                debugImage.Save(debugPathNotFound, ImageFormat.Png);
+                debugImage.Dispose();
+                searchArea.Dispose();
+                bwImage.Dispose();
+
+                // If color is not found, return false with coordinates to click
+                return new TimeCheckResult 
+                { 
+                    ColorFound = false, 
+                    XCoordinate = clickX, 
+                    YCoordinate = clickY 
                 };
             }
         }
-
-        return bestMatch;
     }
-}*/
+}

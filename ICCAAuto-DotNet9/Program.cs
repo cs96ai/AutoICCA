@@ -254,19 +254,28 @@ namespace ICCAAutoDotNet9
                         int attempts = 0;
                         bool exitLoop = false;
 
+                        // loop through all the reports by clicking next
                         while (!exitLoop && attempts < maxAttempts)
                         {
                             attempts++;
                             LogStep($"Report navigation attempt {attempts} of {maxAttempts} for MRN: {mrn}");
 
-                            // Step 1: Check and click first coordinate (time options) if not blue
-                            Color color1 = GetPixelColor(1207, 351);
-                            if (color1.R != 0x33 || color1.G != 0x99 || color1.B != 0xFF) // Not #3399FF
+                            // Step 1: Check check to see if the default reporting period is selected
+                            
+                            Bitmap leftMostScreen = CaptureScreenshot();
+                            var timeCheckResult = TimeOptions.CheckForBlueBarInTimeSelection(leftMostScreen);
+
+                            if (!timeCheckResult.ColorFound)
                             {
-                                SetCursorPos(targetScreen.Bounds.X + 1207, targetScreen.Bounds.Y + 351);
+                                LogStep($"Time slot color not found, clicking at ({timeCheckResult.XCoordinate}, {timeCheckResult.YCoordinate})");
+                                SetCursorPos(timeCheckResult.XCoordinate , timeCheckResult.YCoordinate);
                                 Thread.Sleep(step.InputDelay);
                                 mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                                 Thread.Sleep(step.PostClickDelay);
+                            }
+                            else
+                            {
+                                LogStep("Time slot color found, proceeding to next step.");
                             }
 
                             // Step 2: Check and click second coordinate (next button) if not light gray (#F0F0F0)
@@ -303,7 +312,7 @@ namespace ICCAAutoDotNet9
 
                             if (!exitLoop)
                             {
-                                Thread.Sleep(1000); // Wait a second before next attempt
+                                Thread.Sleep(500); // Wait a second before next attempt
                             }
                         }
 
@@ -403,8 +412,7 @@ namespace ICCAAutoDotNet9
                         }
                     }
 
-
-
+                  
                     else if (step.Instruction?.ToLower() == "done")
                     {
                         // Click at the specified coordinates
@@ -597,53 +605,45 @@ namespace ICCAAutoDotNet9
         {
             try
             {
-                // Detect all available screens
-                Screen[] screens = Screen.AllScreens;
-                Screen selectedScreen;
+                // Always use the leftmost monitor
+                var targetScreen = Screen.AllScreens.OrderBy(s => s.Bounds.X).First();
+                LogStep($"Capturing screenshot from leftmost monitor: {targetScreen.DeviceName}");
 
-                if (screens.Length == 1)
-                {
-                    selectedScreen = screens[0];
-                    LogStep("Capturing screenshot from primary (only) monitor");
-                }
-                else
-                {
-                    selectedScreen = screens.OrderBy(s => s.Bounds.X).First();
-                    LogStep("Capturing screenshot from leftmost monitor");
-                }
-
-                int width = selectedScreen.Bounds.Width;
-                int height = selectedScreen.Bounds.Height;
-                int startX = selectedScreen.Bounds.X;
-                int startY = selectedScreen.Bounds.Y;
-
-                Bitmap screenshot = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+                int width = targetScreen.Bounds.Width;
+                int height = targetScreen.Bounds.Height;
+                Bitmap screenshot = new Bitmap(width, height);
                 using (Graphics g = Graphics.FromImage(screenshot))
                 {
-                    g.CopyFromScreen(startX, startY, 0, 0, new System.Drawing.Size(width, height), CopyPixelOperation.SourceCopy);
+                    g.CopyFromScreen(targetScreen.Bounds.X, targetScreen.Bounds.Y, 0, 0, new Size(width, height));
                 }
+                string screenshotPath = SaveScreenshot(screenshot, "capture");
+                LogStep($"Screenshot saved to: {screenshotPath}");
                 return screenshot;
             }
             catch (Exception ex)
             {
                 LogStep($"Error capturing screenshot: {ex.Message}");
-                Console.WriteLine($"Error capturing screenshot: {ex.Message}");
-                // Fallback mechanism - capture primary screen with default dimensions
-                try
-                {
-                    Bitmap fallbackScreenshot = new Bitmap(1920, 1080, PixelFormat.Format32bppArgb);
-                    using (Graphics g = Graphics.FromImage(fallbackScreenshot))
-                    {
-                        g.CopyFromScreen(0, 0, 0, 0, new System.Drawing.Size(1920, 1080), CopyPixelOperation.SourceCopy);
-                    }
-                    LogStep("Fallback screenshot capture successful");
-                    return fallbackScreenshot;
-                }
-                catch (Exception fallbackEx)
-                {
-                    LogStep($"Fallback screenshot capture failed: {fallbackEx.Message}");
-                    throw new Exception("Failed to capture screenshot even with fallback", fallbackEx);
-                }
+                throw;
+            }
+        }
+
+        static string SaveScreenshot(Bitmap screenshot, string screenshotType)
+        {
+            try
+            {
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                string filename = $"{screenshotType}_{timestamp}.png";
+                string logDir = ".\\Log";
+                if (!Directory.Exists(logDir))
+                    Directory.CreateDirectory(logDir);
+                string filepath = Path.Combine(logDir, filename);
+                screenshot.Save(filepath, ImageFormat.Png);
+                return filepath;
+            }
+            catch (Exception ex)
+            {
+                LogStep($"Error saving screenshot: {ex.Message}");
+                throw;
             }
         }
 
