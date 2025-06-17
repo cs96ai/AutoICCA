@@ -352,7 +352,7 @@ namespace ICCAAutoDotNet9
                     else if (step.Instruction?.ToLower() == "click filename for all reports")
                     {
                         // Create export directory if it doesn't exist
-                        string exportDir = @"C:\ICCA_Exports\Export";
+                        string exportDir = @"C:\ICCAExports\";
                         if (!Directory.Exists(exportDir))
                         {
                             LogStep($"Creating export directory: {exportDir}");
@@ -391,7 +391,8 @@ namespace ICCAAutoDotNet9
                             }
 
                             // Background is white, proceed with file save
-                            string fileName = Path.Combine(exportDir, $"{mrn}_{reportNum}");
+                            //string fileName = Path.Combine(exportDir, $"{mrn}_{reportNum}");
+                            string fileName = mrn + "_" + reportNum;
                             LogStep($"Saving report {reportNum} to: {fileName}");
 
                             Thread.Sleep(step.InputDelay);

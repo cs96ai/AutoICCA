@@ -1,23 +1,23 @@
 [
-	{ "xpos": 18, "ypos": 35, "instruction": "click home", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 240, "ypos": 80, "instruction": "find patient", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 635, "ypos": 337, "instruction": "click mrn", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 634, "ypos": 536, "instruction": "click discharge", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 1143, "ypos": 609, "instruction": "click search", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 984, "ypos": 688, "instruction": "click first result", "pre_click_delay": 500, "post_click_delay": 3000, "input_delay": 500 },
-    { "xpos": 1139, "ypos": 819, "instruction": "click open chart", "pre_click_delay": 500, "post_click_delay": 3000, "input_delay": 500 },
+	{ "xpos": 18, "ypos": 35, "instruction": "click home", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 240, "ypos": 80, "instruction": "find patient", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 635, "ypos": 337, "instruction": "click mrn", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 634, "ypos": 536, "instruction": "click discharge", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 1143, "ypos": 609, "instruction": "click search", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 984, "ypos": 688, "instruction": "click first result", "pre_click_delay": 100, "post_click_delay": 3000, "input_delay": 500 },
+    { "xpos": 1139, "ypos": 819, "instruction": "click open chart", "pre_click_delay": 100, "post_click_delay": 3000, "input_delay": 500 },
 	
 
-    { "xpos": 26, "ypos": 35, "instruction": "click home", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 187, "ypos": 84, "instruction": "click print", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 752, "ypos": 416, "instruction": "click patient charts checkbox", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-	{ "xpos": 724, "ypos": 407, "instruction": "box count screen shot", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
-    { "xpos": 1082, "ypos": 804, "instruction": "click ok", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
+    { "xpos": 26, "ypos": 35, "instruction": "click home", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 187, "ypos": 84, "instruction": "click print", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 752, "ypos": 416, "instruction": "click patient charts checkbox", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+	{ "xpos": 724, "ypos": 407, "instruction": "box count screen shot", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
+    { "xpos": 1082, "ypos": 804, "instruction": "click ok", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
 	
-	{ "xpos": 1211, "ypos": 788, "instruction": "click next for all reports", "pre_click_delay": 500, "post_click_delay": 2000, "input_delay": 500 },
+	{ "xpos": 1211, "ypos": 788, "instruction": "click next for all reports", "pre_click_delay": 100, "post_click_delay": 200, "input_delay": 500 },
 	
 
-	{ "xpos": 155, "ypos": 434, "instruction": "click filename for all reports", "path": "C:\\ICCA_Exports\\{mrn}", "pre_click_delay": 5000, "post_click_delay": 2000, "input_delay": 500 },
-	{ "xpos": 1903, "ypos": 165, "instruction": "done", "path": "C:\\ICCA_Exports\\{mrn}", "pre_click_delay": 5000, "post_click_delay": 2000, "input_delay": 500 }
+	{ "xpos": 155, "ypos": 434, "instruction": "click filename for all reports", "path": "C:\\ICCAExports\\{mrn}", "pre_click_delay": 200, "post_click_delay": 200, "input_delay": 500 },
+	{ "xpos": 1903, "ypos": 165, "instruction": "done", "path": "C:\\ICCAExports\\{mrn}", "pre_click_delay": 200, "post_click_delay": 200, "input_delay": 500 }
 	
 ]

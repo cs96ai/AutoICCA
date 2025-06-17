@@ -9,17 +9,20 @@ namespace CountCheckBox
         {
             try
             {
-                string sourceImagePath = "sample.png";
-                string testImagePath = "test.png";
+                string imagePath = "TimeOptions2.png";
+                string targetText = "length of stay";
 
-                // Copy sample.png to test.png
-                File.Copy(sourceImagePath, testImagePath, true);
-                Console.WriteLine("Created copy of sample.png as test.png");
+                var timeOptions = new TimeOptions();
+                var (x, y) = timeOptions.FindTextLineCoordinates(imagePath);
 
-                // Create instance of BoxCounter and process the image
-                var boxCounter = new BoxCounter();
-                int numberOfBoxes = boxCounter.ProcessImageAndCountBoxes(testImagePath, "output.png");
-                Console.WriteLine($"Total boxes found: {numberOfBoxes}");
+                if (x == -1 && y == -1)
+                {
+                    Console.WriteLine($"No match found for '{targetText}'.");
+                }
+                else
+                {
+                    Console.WriteLine($"Best match for '{targetText}' found at coordinates: x={x}, y={y}");
+                }
             }
             catch (Exception ex)
             {
