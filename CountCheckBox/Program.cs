@@ -12,13 +12,13 @@ namespace CountCheckBox
             try
             {
                 string imagePath = "TimeOptions3.png";
-                string targetText = "length of stay";
 
                 // Load the image as a Bitmap
                 Bitmap image = new Bitmap(imagePath);
 
                 // Call the method with Bitmap
-                var result = TimeOptions.CheckForBlueBarInTimeSelection(image);
+                TimeOptions t = new TimeOptions();
+                var result = t.CheckForBlueBarInTimeSelection(image);
 
                 if (result.ColorFound)
                 {

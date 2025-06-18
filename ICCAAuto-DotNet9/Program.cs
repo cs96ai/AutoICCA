@@ -261,9 +261,9 @@ namespace ICCAAutoDotNet9
                             LogStep($"Report navigation attempt {attempts} of {maxAttempts} for MRN: {mrn}");
 
                             // Step 1: Check check to see if the default reporting period is selected
-                            
-                            
-                            var timeCheckResult = TimeOptions.CheckForBlueBarInTimeSelection(CaptureScreenshot());
+
+                            TimeOptions t = new TimeOptions();
+                            var timeCheckResult = t.CheckForBlueBarInTimeSelection(CaptureScreenshot());
 
                             if (!timeCheckResult.ColorFound)
                             {
