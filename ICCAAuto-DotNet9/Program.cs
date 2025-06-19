@@ -151,36 +151,7 @@ namespace ICCAAutoDotNet9
             }
         }
 
-        static bool ProcessPatientViaImages(string mrn)
-        {
-            // Get list of step image files from Steps directory, sorted by filename
-            string[] stepImagePaths = Directory.GetFiles(StepsFolder, "*.png")
-                                         .OrderBy(f => f)
-                                         .ToArray();
-
-            // Create list of Step objects
-            List<Step> steps = stepImagePaths.Select(path => new Step(path)).ToList();
-
-            int stepNumber = 1;
-
-            foreach (Step step in steps)
-            {
-                LogStep($"Starting step {stepNumber} ({step.Name}) for MRN: {mrn}");
-                Console.WriteLine($"Executing step {stepNumber} ({step.Name}) for MRN: {mrn}");
-
-                if (!ExecuteStep(step.ImagePath, mrn, step.Name))
-                {
-                    LogStep($"Failed to complete step {stepNumber} ({step.Name}) for MRN: {mrn} after 5 attempts");
-                    Console.WriteLine($"Failed to complete step {stepNumber} ({step.Name}) for MRN: {mrn} after 5 attempts");
-                    return false;
-                }
-
-                LogStep($"Completed step {stepNumber} ({step.Name}) for MRN: {mrn}");
-                stepNumber++;
-            }
-
-            return true;
-        }
+       
 
         static bool ProcessPatientViaXYPosition(string mrn)
         {
@@ -250,7 +221,7 @@ namespace ICCAAutoDotNet9
                     else if (step.Instruction?.ToLower() == "click next for all reports")
                     {
                         reportsGenerated=1;
-                        const int maxAttempts = 10;
+                        const int maxAttempts = 20;
                         int attempts = 0;
                         bool exitLoop = false;
 
@@ -263,12 +234,18 @@ namespace ICCAAutoDotNet9
                             // Step 1: Check check to see if the default reporting period is selected
 
                             TimeOptions t = new TimeOptions();
+                            
+                            //If this doesn't find the blue bar, it will return the coordinates of where to click the "length of stay" option on the UI
                             var timeCheckResult = t.CheckForBlueBarInTimeSelection(CaptureScreenshot());
 
                             if (!timeCheckResult.ColorFound)
                             {
                                 LogStep($"Time slot color not found, clicking at ({timeCheckResult.XCoordinate}, {timeCheckResult.YCoordinate})");
-                                SetCursorPos(timeCheckResult.XCoordinate , timeCheckResult.YCoordinate);
+                                // Adjust coordinates for the leftmost monitor
+                                var targetScreen2 = Screen.AllScreens.OrderBy(s => s.Bounds.X).First();
+                                int absoluteX2 = targetScreen2.Bounds.X + timeCheckResult.XCoordinate;
+                                int absoluteY2 = targetScreen2.Bounds.Y + timeCheckResult.YCoordinate;
+                                SetCursorPos(absoluteX2, absoluteY2);
                                 Thread.Sleep(step.InputDelay);
                                 mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                                 Thread.Sleep(step.PostClickDelay);
@@ -278,7 +255,7 @@ namespace ICCAAutoDotNet9
                                 LogStep("Time slot color found, proceeding to next step.");
                             }
 
-                            // Step 2: Check and click second coordinate (next button) if not light gray (#F0F0F0)
+                            // Step 2: Check and click the next button if not light gray (#F0F0F0)
                             Color color2 = GetPixelColor(1242, 785);
                             bool isF0F0F0 = color2.R == 0xF0 && color2.G == 0xF0 && color2.B == 0xF0; // #F0F0F0
                             bool isDDDDDD = color2.R == 0xDD && color2.G == 0xDD && color2.B == 0xDD; // #DDDDDD
@@ -421,6 +398,7 @@ namespace ICCAAutoDotNet9
                         mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                         Thread.Sleep(step.PostClickDelay);
 
+
                         // Log the total reports generated and reset counter
                         LogStep($"Completed processing {reportsGenerated} reports for MRN: {mrn}");
                         reportsGenerated = 0;
@@ -482,6 +460,54 @@ namespace ICCAAutoDotNet9
                 LogStep($"Error processing JSON file: {ex.Message}");
                 Console.WriteLine($"Error processing JSON file: {ex.Message}");
                 return false;
+            }
+        }
+
+        static void MoveFilesToCompleted(string mrn)
+        {
+            string sourceDir = "C:\\ICCAExports\\" + mrn;
+            string destDir = "C:\\ICCAExports\\Completed\\" + mrn;
+            
+            try
+            {
+                // Create the destination directory if it doesn't exist
+                if (!Directory.Exists(destDir))
+                {
+                    Directory.CreateDirectory(destDir);
+                    LogStep($"Created destination directory: {destDir}");
+                }
+                
+                // Check if source directory exists
+                if (Directory.Exists(sourceDir))
+                {
+                    // Get all files in the source directory
+                    string[] files = Directory.GetFiles(sourceDir);
+                    
+                    foreach (string file in files)
+                    {
+                        string fileName = Path.GetFileName(file);
+                        string destFile = Path.Combine(destDir, fileName);
+                        
+                        // Move file and overwrite if it exists
+                        if (File.Exists(destFile))
+                        {
+                            File.Delete(destFile);
+                            LogStep($"Deleted existing file: {destFile}");
+                        }
+                        File.Move(file, destFile);
+                        LogStep($"Moved file: {file} -> {destFile}");
+                    }
+                    LogStep($"Completed moving {files.Length} files for MRN: {mrn}");
+                }
+                else
+                {
+                    LogStep($"Source directory not found: {sourceDir}");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogStep($"Error moving files for MRN: {mrn}. Error: {ex.Message}");
+                Console.WriteLine($"Error moving files: {ex.Message}");
             }
         }
 

@@ -11,7 +11,7 @@ namespace CountCheckBox
         {
             try
             {
-                string imagePath = "TimeOptions3.png";
+                string imagePath = "TimeOptions4.png";
 
                 // Load the image as a Bitmap
                 Bitmap image = new Bitmap(imagePath);
